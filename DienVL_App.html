@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DienVL</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<style>
+  :root{--bg:#000;--panel:#050505;--muted:#7a7a7a;--accent:#00e6a8;--accent2:#7dd3fc}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:#e6eef6;-webkit-tap-highlight-color:transparent;}
+  .app{max-width:920px;margin:0 auto;padding:10px;min-height:100vh;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+  header{display:flex;gap:8px;align-items:center;justify-content:center;padding:6px 0}
+  header h1{font-size:18px;margin:0;color:var(--accent)}
+  .nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .tab{background:linear-gradient(180deg, #070707, #0a0a0a);border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:10px;color:var(--accent);font-weight:600;touch-action:manipulation}
+  .tab.inactive{opacity:0.6;color:var(--muted)}
+  .panel{background:var(--panel);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.6);display:none}
+  .panel.active{display:block}
+  input,select,textarea,button{font-size:16px;border-radius:10px;padding:10px;border:1px solid rgba(255,255,255,0.04);background:#070707;color:#e6eef6;outline:none}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .full{width:100%}
+  .calc-screen{background:#000;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);font-size:22px;text-align:right}
+  .grid-ttt{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+  .cell{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#070707;border-radius:8px;font-size:34px;user-select:none}
+  .btn{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#001;border:none;padding:8px 12px;border-radius:10px;font-weight:700}
+  .muted{color:var(--muted);font-size:13px}
+  /* Snake */
+  .snake-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+  canvas{background:#000;border:1px solid rgba(255,255,255,0.03);border-radius:8px}
+  .controls{display:flex;gap:8px;justify-content:center}
+  .arrow{width:56px;height:56px;border-radius:10px;background:#0b0b0b;display:flex;align-items:center;justify-content:center;font-size:22px}
+  footer{padding:8px 0;text-align:center;color:var(--muted);font-size:13px}
+  @media (max-width:420px){ .cell{font-size:28px} .btn{padding:8px 10px} canvas{width:320px;height:240px} }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header><h1>DienVL</h1></header>
+  <nav class="nav" id="nav">
+    <button class="tab" data-target="calc">Máy tính</button>
+    <button class="tab inactive" data-target="pw">Mật khẩu</button>
+    <button class="tab inactive" data-target="note">Ghi chú</button>
+    <button class="tab inactive" data-target="ttt">Caro AI</button>
+    <button class="tab inactive" data-target="snake">Snake</button>
+  </nav>
+
+  <!-- Calculator -->
+  <section id="calc" class="panel active">
+    <div class="calc-screen full" id="calcScreen">0</div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="calcPress('C')">C</button>
+      <button class="btn" onclick="calcPress('⌫')">⌫</button>
+      <button class="btn" onclick="calcPress('%')">%</button>
+      <button class="btn" onclick="calcPress('/')">÷</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="calcPress('7')">7</button>
+      <button class="btn" onclick="calcPress('8')">8</button>
+      <button class="btn" onclick="calcPress('9')">9</button>
+      <button class="btn" onclick="calcPress('*')">×</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="calcPress('4')">4</button>
+      <button class="btn" onclick="calcPress('5')">5</button>
+      <button class="btn" onclick="calcPress('6')">6</button>
+      <button class="btn" onclick="calcPress('-')">−</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="calcPress('1')">1</button>
+      <button class="btn" onclick="calcPress('2')">2</button>
+      <button class="btn" onclick="calcPress('3')">3</button>
+      <button class="btn" onclick="calcPress('+')">+</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn full" style="flex:1" onclick="calcPress('0')">0</button>
+      <button class="btn" onclick="calcPress('.')">.</button>
+      <button class="btn" onclick="calcPress('=')">=</button>
+    </div>
+  </section>
+
+  <!-- Password (kept simple) -->
+  <section id="pw" class="panel">
+    <div class="row">
+      <input id="pwlen" type="number" min="4" max="32" value="12" class="full">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn full" onclick="genPW()">Tạo mật khẩu</button>
+    </div>
+    <div class="row" style="margin-top:8px"><div id="pwout" class="full muted"></div></div>
+  </section>
+
+  <!-- Notes -->
+  <section id="note" class="panel">
+    <textarea id="notes" rows="8" class="full" placeholder="Ghi chú..."></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" onclick="saveNote()">Lưu</button>
+      <button class="btn" onclick="clearNote()">Xóa</button>
+    </div>
+  </section>
+
+  <!-- Tic Tac Toe with unbeatable bot -->
+  <section id="ttt" class="panel">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="muted">Bạn: X — Máy: O</div>
+      <div class="muted" id="tttMsg"></div>
+    </div>
+    <div class="grid-ttt" id="board"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="resetTTT()">Làm lại</button>
+      <button class="btn" onclick="botMoveFirst()">Máy đi trước</button>
+    </div>
+  </section>
+
+  <!-- Snake -->
+  <section id="snake" class="panel">
+    <div class="snake-wrap">
+      <canvas id="snakeCanvas" width="360" height="240"></canvas>
+      <div class="controls">
+        <button class="arrow" onclick="setDir('up')">↑</button>
+      </div>
+      <div class="controls">
+        <button class="arrow" onclick="setDir('left')">←</button>
+        <button class="arrow" onclick="setDir('down')">↓</button>
+        <button class="arrow" onclick="setDir('right')">→</button>
+      </div>
+      <div class="row">
+        <button class="btn" onclick="startSnake()">Bắt đầu</button>
+        <button class="btn" onclick="stopSnake()">Dừng</button>
+      </div>
+      <div class="muted" id="snakeScore">Điểm: 0</div>
+    </div>
+  </section>
+
+  <footer> </footer>
+</div>
+
+<script>
+// Navigation
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.add('inactive'));
+  t.classList.remove('inactive');
+  const target = t.dataset.target;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(target).classList.add('active');
+}));
+
+// Calculator
+let calcExp = '';
+const calcScreen = document.getElementById('calcScreen');
+function calcPress(k){
+  if(k==='C'){ calcExp=''; calcScreen.textContent='0'; return; }
+  if(k==='⌫'){ calcExp = calcExp.slice(0,-1); calcScreen.textContent = calcExp || '0'; return; }
+  if(k==='='){ try{ let res = eval(calcExp.replace(/×/g,'*').replace(/÷/g,'/')); calcScreen.textContent = String(res); calcExp = String(res); }catch(e){ calcScreen.textContent='Error'; calcExp=''; } return; }
+  if(k==='%'){ try{ let v = eval(calcExp); v = v/100; calcScreen.textContent=String(v); calcExp=String(v);}catch(e){ } return; }
+  calcExp += k;
+  calcScreen.textContent = calcExp;
+}
+// basic keyboard support
+document.addEventListener('keydown', e=>{ const k = e.key; if(/[\d+\-*/.%]/.test(k)||k==='Enter'||k==='Backspace'){ e.preventDefault(); if(k==='Enter') calcPress('='); else if(k==='Backspace') calcPress('⌫'); else calcPress(k); } });
+
+// Password
+function genPW(){
+  const n = parseInt(document.getElementById('pwlen').value)||12;
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*()";
+  let s=''; for(let i=0;i<n;i++) s += chars.charAt(Math.floor(Math.random()*chars.length));
+  document.getElementById('pwout').textContent = s;
+}
+
+// Notes
+function saveNote(){ localStorage.setItem('dienvl_note', document.getElementById('notes').value); alert('Đã lưu'); }
+function clearNote(){ if(confirm('Xóa ghi chú?')){ localStorage.removeItem('dienvl_note'); document.getElementById('notes').value=''; } }
+document.addEventListener('DOMContentLoaded', ()=>{
+  const v = localStorage.getItem('dienvl_note'); if(v) document.getElementById('notes').value = v;
+});
+
+// Tic Tac Toe with Minimax (unbeatable)
+let board = Array(9).fill(null);
+let human = 'X', ai = 'O';
+
+function renderBoard(){
+  const container = document.getElementById('board'); container.innerHTML='';
+  for(let i=0;i<9;i++){
+    const cell = document.createElement('div'); cell.className='cell'; cell.dataset.i=i; cell.textContent = board[i]||'';
+    cell.addEventListener('click', ()=>{ if(board[i]|| checkWinner(board)) return; board[i]=human; renderBoard(); if(!checkWinner(board)) { const m = bestMove(); board[m]=ai; } renderBoard(); const w = checkWinner(board); if(w) showResult(w); });
+    container.appendChild(cell);
+  }
+}
+function resetTTT(){ board = Array(9).fill(null); document.getElementById('tttMsg').textContent=''; renderBoard(); }
+function botMoveFirst(){ resetTTT(); const first = [0,2,4,6,8][Math.floor(Math.random()*5)]; board[first]=ai; renderBoard(); }
+function showResult(w){ const msg = w==='Draw' ? 'Hoà' : (w+' thắng'); document.getElementById('tttMsg').textContent = msg; }
+// check winner
+function checkWinner(bd){
+  const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const line of wins){ const [a,b,c]=line; if(bd[a] && bd[a]===bd[b] && bd[a]===bd[c]) return bd[a]; }
+  if(bd.every(Boolean)) return 'Draw';
+  return null;
+}
+// minimax
+function bestMove(){
+  let bestScore = -Infinity; let move = null;
+  for(let i=0;i<9;i++){
+    if(!board[i]){
+      board[i]=ai;
+      let score = minimax(board, 0, false);
+      board[i]=null;
+      if(score>bestScore){ bestScore = score; move = i; }
+    }
+  }
+  return move;
+}
+function minimax(bd, depth, isMax){
+  const result = checkWinner(bd);
+  if(result!==null){ if(result===ai) return 10-depth; if(result===human) return depth-10; return 0; }
+  if(isMax){
+    let best = -Infinity;
+    for(let i=0;i<9;i++){ if(!bd[i]){ bd[i]=ai; let val = minimax(bd, depth+1, false); bd[i]=null; best = Math.max(best,val); } }
+    return best;
+  } else {
+    let best = Infinity;
+    for(let i=0;i<9;i++){ if(!bd[i]){ bd[i]=human; let val = minimax(bd, depth+1, true); bd[i]=null; best = Math.min(best,val); } }
+    return best;
+  }
+}
+resetTTT();
+
+
+// Snake game (simple)
+let snakeInterval = null;
+let dir = 'right';
+let snake = [{x:5,y:5},{x:4,y:5},{x:3,y:5}];
+let food = {x:10,y:5};
+const cols = 18, rows = 12;
+const cellSize = 20;
+const canvas = document.getElementById('snakeCanvas');
+const ctx = canvas.getContext('2d');
+function draw(){
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // draw food
+  ctx.fillStyle = 'red'; ctx.fillRect(food.x*cellSize, food.y*cellSize, cellSize-2, cellSize-2);
+  // draw snake
+  ctx.fillStyle = '#0f0'; for(let s of snake) ctx.fillRect(s.x*cellSize, s.y*cellSize, cellSize-2, cellSize-2);
+}
+function placeFood(){ while(true){ const x = Math.floor(Math.random()*cols); const y = Math.floor(Math.random()*rows); if(!snake.some(s=>s.x===x && s.y===y)){ food={x,y}; break; } } }
+function step(){
+  const head = {...snake[0]};
+  if(dir==='right') head.x++; if(dir==='left') head.x--; if(dir==='up') head.y--; if(dir==='down') head.y++;
+  // wrap
+  if(head.x<0) head.x=cols-1; if(head.x>=cols) head.x=0; if(head.y<0) head.y=rows-1; if(head.y>=rows) head.y=0;
+  // collision
+  if(snake.some(s=>s.x===head.x && s.y===head.y)){ stopSnake(); return; }
+  snake.unshift(head);
+  if(head.x===food.x && head.y===food.y){ placeFood(); document.getElementById('snakeScore').textContent = 'Điểm: '+(snake.length-3); } else snake.pop();
+  draw();
+}
+function startSnake(){
+  stopSnake();
+  snake = [{x:5,y:5},{x:4,y:5},{x:3,y:5}]; dir='right'; placeFood(); draw();
+  snakeInterval = setInterval(step, 120);
+}
+function stopSnake(){ if(snakeInterval) clearInterval(snakeInterval); snakeInterval=null; }
+function setDir(d){ const opposites = {left:'right', right:'left', up:'down', down:'up'}; if(opposites[d]===dir) return; dir=d; }
+// touch swipe controls
+let touchStart = null;
+canvas.addEventListener('touchstart', e=>{ touchStart = e.touches[0]; });
+canvas.addEventListener('touchend', e=>{ if(!touchStart) return; const t = e.changedTouches[0]; const dx = t.clientX - touchStart.clientX; const dy = t.clientY - touchStart.clientY; if(Math.abs(dx)>Math.abs(dy)){ if(dx>20) setDir('right'); else if(dx<-20) setDir('left'); } else { if(dy>20) setDir('down'); else if(dy<-20) setDir('up'); } touchStart=null; });
+
+// init draw sizes
+function fitCanvas(){ const w = Math.min(window.innerWidth-40, 360); canvas.width = Math.floor(w/20)*20; canvas.height = Math.floor((canvas.width*2/3)/20)*20; draw(); }
+window.addEventListener('resize', fitCanvas); fitCanvas();
+
+</script>
+</body>
+</html>
